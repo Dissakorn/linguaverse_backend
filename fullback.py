@@ -4,6 +4,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from pymongo import MongoClient
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 
@@ -11,12 +12,13 @@ app = Flask(__name__)
 def upload_photo():
     file = request.files['file']
     if file:
+        load_dotenv()
         filename = file.filename
         temp_path = os.path.join('temp', filename)
         file.save(temp_path)
         
         # Upload to Google Drive
-        file_url = upload_to_drive(temp_path, '1-m5NIqFtATKexE3KPCL376X0iC20LyR3')
+        file_url = upload_to_drive(temp_path, os.getenv('FOLDER_ID'))
 
         # Save the file URL to MongoDB
         save_url_to_mongo(file_url)
@@ -24,18 +26,21 @@ def upload_photo():
         return jsonify({'message': 'Photo uploaded successfully!', 'file_url': file_url}), 200
     return jsonify({'error': 'No file uploaded!'}), 400
 
+load_dotenv()
 creds = None
+PATH = os.getenv('PATH_ID')
 creds = service_account.Credentials.from_service_account_file(
-    r'./json/mecha-403710-e223c6e67d7b.json',
+    PATH,
     scopes=['https://www.googleapis.com/auth/drive']
 )
 # Build the drive service
 drive_service = build('drive', 'v3', credentials=creds)
 
 def upload_to_drive(file_path, folder_id):
+    load_dotenv()
     file_metadata = {
         'name': os.path.basename(file_path),
-        'parents': ['1-m5NIqFtATKexE3KPCL376X0iC20LyR3']
+        'parents': [os.getenv('FOLDER_ID')]
     }
     media = MediaFileUpload(file_path, mimetype='image/jpeg')
     request = drive_service.files().create(
@@ -51,8 +56,9 @@ def upload_to_drive(file_path, folder_id):
     return file_url
 
 def save_url_to_mongo(file_url):
-    client = MongoClient('mongodb://localhost:27017/')
-    db = client['Mecha']
+    load_dotenv()
+    client = MongoClient(os.getenv('MONGO_URI'))
+    db = client['lingua']
     collection = db['photo']
     doc = {
         'file_url': file_url
@@ -61,11 +67,12 @@ def save_url_to_mongo(file_url):
     client.close()
 
 if __name__ == '__main__':
+    load_dotenv()
     if not os.path.exists('temp'):
         os.makedirs('temp')
     # Path to the file you want to upload
     file_path = r'./temp/photo.png'
-    folder_id = '1-m5NIqFtATKexE3KPCL376X0iC20LyR3'
+    folder_id = os.getenv('FOLDER_ID')
     
     file_url = upload_to_drive(file_path, folder_id)  # Upload photo to Google Drive
     save_url_to_mongo(file_url)  # Save the file URL to MongoDB
