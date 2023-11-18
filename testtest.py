@@ -49,7 +49,7 @@ def save_response_content(response, destination):
                 f.write(chunk)
 
 # Create a folder named "photo" if it doesn't exist
-folder_path = r'C:\Users\User\Desktop\mecha\Neno\photo'  # Use a raw string
+folder_path = r'./photo'  # Use a raw string
 if not os.path.exists(folder_path):
     os.makedirs(folder_path)
 
